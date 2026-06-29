@@ -19,100 +19,24 @@
 
 // exclude unsupported compilers
 #if !defined(JSON_SKIP_UNSUPPORTED_COMPILER_CHECK)
-    #if defined(__clang__)
-        #if (__clang_major__ * 10000 + __clang_minor__ * 100 + __clang_patchlevel__) < 30400
-            #error "unsupported Clang version - see https://github.com/nlohmann/json#supported-compilers"
-        #endif
-    #elif defined(__GNUC__) && !(defined(__ICC) || defined(__INTEL_COMPILER))
-        #if (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__) < 40800
-            #error "unsupported GCC version - see https://github.com/nlohmann/json#supported-compilers"
-        #endif
+    #if !defined(__clang__) || (!defined(__arm64__) && !defined(__aarch64__))
+        #error "Ramer-nlohmann-json is optimized and exclusive for Apple Silicon (Clang ARM64)!"
     #endif
 #endif
 
 // C++ language standard detection
-// if the user manually specified the used C++ version, this is skipped
-#if !defined(JSON_HAS_CPP_26) && !defined(JSON_HAS_CPP_23) && !defined(JSON_HAS_CPP_20) && !defined(JSON_HAS_CPP_17) && !defined(JSON_HAS_CPP_14) && !defined(JSON_HAS_CPP_11)
-    #if (defined(__cplusplus) && __cplusplus > 202302L) || (defined(_MSVC_LANG) && _MSVC_LANG > 202302L)
-        #define JSON_HAS_CPP_26
-        #define JSON_HAS_CPP_23
-        #define JSON_HAS_CPP_20
-        #define JSON_HAS_CPP_17
-        #define JSON_HAS_CPP_14
-    #elif (defined(__cplusplus) && __cplusplus > 202002L) || (defined(_MSVC_LANG) && _MSVC_LANG > 202002L)
-        #define JSON_HAS_CPP_23
-        #define JSON_HAS_CPP_20
-        #define JSON_HAS_CPP_17
-        #define JSON_HAS_CPP_14
-    #elif (defined(__cplusplus) && __cplusplus > 201703L) || (defined(_MSVC_LANG) && _MSVC_LANG > 201703L)
-        #define JSON_HAS_CPP_20
-        #define JSON_HAS_CPP_17
-        #define JSON_HAS_CPP_14
-    #elif (defined(__cplusplus) && __cplusplus > 201402L) || (defined(_HAS_CXX17) && _HAS_CXX17 == 1) // fix for issue #464
-        #define JSON_HAS_CPP_17
-        #define JSON_HAS_CPP_14
-    #elif (defined(__cplusplus) && __cplusplus > 201103L) || (defined(_HAS_CXX14) && _HAS_CXX14 == 1)
-        #define JSON_HAS_CPP_14
-    #endif
-    // the cpp 11 flag is always specified because it is the minimal required version
-    #define JSON_HAS_CPP_11
+#if __cplusplus < 202002L
+    #error "Ramer-nlohmann-json requires C++20 or later!"
 #endif
+
+#define JSON_HAS_CPP_20
+#define JSON_HAS_CPP_17
+#define JSON_HAS_CPP_14
+#define JSON_HAS_CPP_11
 
 #ifdef __has_include
     #if __has_include(<version>)
         #include <version>
-    #endif
-#endif
-
-#if !defined(JSON_HAS_FILESYSTEM) && !defined(JSON_HAS_EXPERIMENTAL_FILESYSTEM)
-    #ifdef JSON_HAS_CPP_17
-        #if defined(__cpp_lib_filesystem)
-            #define JSON_HAS_FILESYSTEM 1
-        #elif defined(__cpp_lib_experimental_filesystem)
-            #define JSON_HAS_EXPERIMENTAL_FILESYSTEM 1
-        #elif !defined(__has_include)
-            #define JSON_HAS_EXPERIMENTAL_FILESYSTEM 1
-        #elif __has_include(<filesystem>)
-            #define JSON_HAS_FILESYSTEM 1
-        #elif __has_include(<experimental/filesystem>)
-            #define JSON_HAS_EXPERIMENTAL_FILESYSTEM 1
-        #endif
-
-        // std::filesystem does not work on MinGW GCC 8: https://sourceforge.net/p/mingw-w64/bugs/737/
-        #if defined(__MINGW32__) && defined(__GNUC__) && __GNUC__ == 8
-            #undef JSON_HAS_FILESYSTEM
-            #undef JSON_HAS_EXPERIMENTAL_FILESYSTEM
-        #endif
-
-        // no filesystem support before GCC 8: https://en.cppreference.com/w/cpp/compiler_support
-        #if defined(__GNUC__) && !defined(__clang__) && __GNUC__ < 8
-            #undef JSON_HAS_FILESYSTEM
-            #undef JSON_HAS_EXPERIMENTAL_FILESYSTEM
-        #endif
-
-        // no filesystem support before Clang 7: https://en.cppreference.com/w/cpp/compiler_support
-        #if defined(__clang_major__) && __clang_major__ < 7
-            #undef JSON_HAS_FILESYSTEM
-            #undef JSON_HAS_EXPERIMENTAL_FILESYSTEM
-        #endif
-
-        // no filesystem support before MSVC 19.14: https://en.cppreference.com/w/cpp/compiler_support
-        #if defined(_MSC_VER) && _MSC_VER < 1914
-            #undef JSON_HAS_FILESYSTEM
-            #undef JSON_HAS_EXPERIMENTAL_FILESYSTEM
-        #endif
-
-        // no filesystem support before iOS 13
-        #if defined(__IPHONE_OS_VERSION_MIN_REQUIRED) && __IPHONE_OS_VERSION_MIN_REQUIRED < 130000
-            #undef JSON_HAS_FILESYSTEM
-            #undef JSON_HAS_EXPERIMENTAL_FILESYSTEM
-        #endif
-
-        // no filesystem support before macOS Catalina
-        #if defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101500
-            #undef JSON_HAS_FILESYSTEM
-            #undef JSON_HAS_EXPERIMENTAL_FILESYSTEM
-        #endif
     #endif
 #endif
 
@@ -121,27 +45,15 @@
 #endif
 
 #ifndef JSON_HAS_FILESYSTEM
-    #define JSON_HAS_FILESYSTEM 0
+    #define JSON_HAS_FILESYSTEM 1
 #endif
 
 #ifndef JSON_HAS_THREE_WAY_COMPARISON
-    #if defined(__cpp_impl_three_way_comparison) && __cpp_impl_three_way_comparison >= 201907L \
-        && defined(__cpp_lib_three_way_comparison) && __cpp_lib_three_way_comparison >= 201907L
-        #define JSON_HAS_THREE_WAY_COMPARISON 1
-    #else
-        #define JSON_HAS_THREE_WAY_COMPARISON 0
-    #endif
+    #define JSON_HAS_THREE_WAY_COMPARISON 1
 #endif
 
 #ifndef JSON_HAS_RANGES
-    // ranges header shipping in GCC 11.1.0 (released 2021-04-27) has a syntax error
-    #if defined(__GLIBCXX__) && __GLIBCXX__ == 20210427
-        #define JSON_HAS_RANGES 0
-    #elif defined(__cpp_lib_ranges)
-        #define JSON_HAS_RANGES 1
-    #else
-        #define JSON_HAS_RANGES 0
-    #endif
+    #define JSON_HAS_RANGES 1
 #endif
 
 #ifndef JSON_HAS_STATIC_RTTI
@@ -152,11 +64,7 @@
     #endif
 #endif
 
-#ifdef JSON_HAS_CPP_17
-    #define JSON_INLINE_VARIABLE inline
-#else
-    #define JSON_INLINE_VARIABLE
-#endif
+#define JSON_INLINE_VARIABLE inline
 
 #if JSON_HEDLEY_HAS_ATTRIBUTE(no_unique_address)
     #define JSON_NO_UNIQUE_ADDRESS [[no_unique_address]]
