@@ -40,6 +40,7 @@
 #include <string> // string, stoi, to_string
 #include <utility> // declval, forward, move, pair, swap
 #include <vector> // vector
+#include <span> // span
 
 #include <nlohmann/adl_serializer.hpp>
 #include <nlohmann/byte_container_with_subtype.hpp>
@@ -4051,6 +4052,19 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
         return result;
     }
 
+    template <typename CharT, std::size_t Extent>
+    JSON_HEDLEY_WARN_UNUSED_RESULT
+    static basic_json parse(std::span<CharT, Extent> s,
+                            parser_callback_t cb = nullptr,
+                            const bool allow_exceptions = true,
+                            const bool ignore_comments = false,
+                            const bool ignore_trailing_commas = false)
+    {
+        basic_json result;
+        parser(detail::input_adapter(s), std::move(cb), allow_exceptions, ignore_comments, ignore_trailing_commas).parse(true, result);
+        return result;
+    }
+
     JSON_HEDLEY_WARN_UNUSED_RESULT
     JSON_HEDLEY_DEPRECATED_FOR(3.8.0, parse(ptr, ptr + len))
     static basic_json parse(detail::span_input_adapter&& i,
@@ -4082,6 +4096,14 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
                        const bool ignore_trailing_commas = false)
     {
         return parser(detail::input_adapter(std::move(first), std::move(last)), nullptr, false, ignore_comments, ignore_trailing_commas).accept(true);
+    }
+
+    template <typename CharT, std::size_t Extent>
+    static bool accept(std::span<CharT, Extent> s,
+                       const bool ignore_comments = false,
+                       const bool ignore_trailing_commas = false)
+    {
+        return parser(detail::input_adapter(s), nullptr, false, ignore_comments, ignore_trailing_commas).accept(true);
     }
 
     JSON_HEDLEY_WARN_UNUSED_RESULT

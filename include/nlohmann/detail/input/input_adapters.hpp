@@ -9,6 +9,7 @@
 #pragma once
 
 #include <array> // array
+#include <span> // span
 #include <cstddef> // size_t
 #include <cstring> // strlen
 #include <iterator> // begin, end, iterator_traits, random_access_iterator_tag, distance, next
@@ -545,6 +546,12 @@ class span_input_adapter
   private:
     contiguous_bytes_input_adapter ia;
 };
+
+template <typename CharT, std::size_t Extent>
+inline contiguous_bytes_input_adapter input_adapter(std::span<CharT, Extent> s)
+{
+    return input_adapter(reinterpret_cast<const char*>(s.data()), reinterpret_cast<const char*>(s.data()) + s.size_bytes());
+}
 
 }  // namespace detail
 NLOHMANN_JSON_NAMESPACE_END

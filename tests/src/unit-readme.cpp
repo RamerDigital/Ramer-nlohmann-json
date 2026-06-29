@@ -23,6 +23,8 @@ using nlohmann::json;
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <span>
+#include <ranges>
 
 // local variable is initialized but not referenced
 DOCTEST_MSVC_SUPPRESS_WARNING_PUSH
@@ -296,6 +298,33 @@ TEST_CASE("README" * doctest::skip())
             // ]
         }
 
+        {
+            // test std::span overloads
+            char const raw_json[] = "[1, 2, 3]";
+            std::span<const char> const s1(raw_json, 9);
+            auto const j1 = json::parse(s1);
+            CHECK(j1.is_array());
+            CHECK(j1.size() == 3);
+
+            std::span<const std::byte> const s2(reinterpret_cast<const std::byte*>(raw_json), 9);
+            auto const j2 = json::parse(s2);
+            CHECK(j2.is_array());
+            CHECK(j2.size() == 3);
+
+            bool const accepted = json::accept(s1);
+            CHECK(accepted == true);
+        }
+        {
+            // test C++20 Ranges and iterator concepts
+            static_assert(std::random_access_iterator<json::iterator>);
+            static_assert(std::random_access_iterator<json::const_iterator>);
+            static_assert(std::ranges::random_access_range<json>);
+
+            json const j = {1, 2, 3};
+            auto view = j | std::views::reverse | std::views::take(2);
+            std::vector<int> const result(view.begin(), view.end());
+            CHECK(result == std::vector<int>{3, 2});
+        }
         // restore old std::cout
         std::cout.rdbuf(old_cout_buffer);
     }
