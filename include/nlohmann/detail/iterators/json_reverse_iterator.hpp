@@ -45,6 +45,7 @@ class json_reverse_iterator : public std::reverse_iterator<Base>
 {
   public:
     using difference_type = std::ptrdiff_t;
+    using iterator_concept = std::random_access_iterator_tag;
     /// shortcut to the reverse iterator adapter
     using base_iterator = std::reverse_iterator<Base>;
     /// the reference type for the pointed-to element

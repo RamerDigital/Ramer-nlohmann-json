@@ -111,9 +111,30 @@ using from_json_function = decltype(T::from_json(std::declval<Args>()...));
 template<typename T, typename U>
 using get_template_function = decltype(std::declval<T>().template get<U>());
 
-// trait checking if JSONSerializer<T>::from_json(json const&, udt&) exists
+// C++20 Concepts for serialization detection
+template<typename T>
+concept IsNotBasicJson = !is_basic_json<T>::value;
+
+template<typename BasicJsonType, typename T>
+concept HasFromJson = IsNotBasicJson<T> && requires(const BasicJsonType& j) {
+    BasicJsonType::template json_serializer<T, void>::from_json(j, std::declval<T&>());
+};
+
+template<typename BasicJsonType, typename T>
+concept HasNonDefaultFromJson = IsNotBasicJson<T> && requires(const BasicJsonType& j) {
+    BasicJsonType::template json_serializer<T, void>::from_json(j);
+};
+
+template<typename BasicJsonType, typename T>
+concept HasToJson = IsNotBasicJson<T> && requires(BasicJsonType& j) {
+    BasicJsonType::template json_serializer<T, void>::to_json(j, std::declval<T>());
+};
+
 template<typename BasicJsonType, typename T, typename = void>
-struct has_from_json : std::false_type {};
+struct has_from_json
+{
+    static constexpr bool value = HasFromJson<BasicJsonType, T>;
+};
 
 // trait checking if j.get<T> is valid
 // use this trait instead of std::is_constructible or std::is_convertible,
@@ -125,44 +146,16 @@ struct is_getable
     static constexpr bool value = is_detected<get_template_function, const BasicJsonType&, T>::value;
 };
 
-template<typename BasicJsonType, typename T>
-struct has_from_json < BasicJsonType, T, enable_if_t < !is_basic_json<T>::value >>
+template<typename BasicJsonType, typename T, typename = void>
+struct has_non_default_from_json
 {
-    using serializer = typename BasicJsonType::template json_serializer<T, void>;
-
-    static constexpr bool value =
-        is_detected_exact<void, from_json_function, serializer,
-        const BasicJsonType&, T&>::value;
+    static constexpr bool value = HasNonDefaultFromJson<BasicJsonType, T>;
 };
 
-// This trait checks if JSONSerializer<T>::from_json(json const&) exists
-// this overload is used for non-default-constructible user-defined-types
 template<typename BasicJsonType, typename T, typename = void>
-struct has_non_default_from_json : std::false_type {};
-
-template<typename BasicJsonType, typename T>
-struct has_non_default_from_json < BasicJsonType, T, enable_if_t < !is_basic_json<T>::value >>
+struct has_to_json
 {
-    using serializer = typename BasicJsonType::template json_serializer<T, void>;
-
-    static constexpr bool value =
-        is_detected_exact<T, from_json_function, serializer,
-        const BasicJsonType&>::value;
-};
-
-// This trait checks if BasicJsonType::json_serializer<T>::to_json exists
-// Do not evaluate the trait when T is a basic_json type, to avoid template instantiation infinite recursion.
-template<typename BasicJsonType, typename T, typename = void>
-struct has_to_json : std::false_type {};
-
-template<typename BasicJsonType, typename T>
-struct has_to_json < BasicJsonType, T, enable_if_t < !is_basic_json<T>::value >>
-{
-    using serializer = typename BasicJsonType::template json_serializer<T, void>;
-
-    static constexpr bool value =
-        is_detected_exact<void, to_json_function, serializer, BasicJsonType&,
-        T>::value;
+    static constexpr bool value = HasToJson<BasicJsonType, T>;
 };
 
 template<typename T>

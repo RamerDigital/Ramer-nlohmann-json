@@ -71,6 +71,7 @@ class iter_impl // NOLINT(cppcoreguidelines-special-member-functions,hicpp-speci
     /// iterator_category, value_type, difference_type, pointer, and reference.
     /// Note that value_type is required to be non-const, even for constant iterators.
     using iterator_category = std::bidirectional_iterator_tag;
+    using iterator_concept = std::random_access_iterator_tag;
 
     /// the type of the values when the iterator is dereferenced
     using value_type = typename BasicJsonType::value_type;
