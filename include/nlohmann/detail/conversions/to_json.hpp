@@ -349,14 +349,12 @@ inline void to_json(BasicJsonType& j, const std::vector<bool>& e)
     external_constructor<value_t::array>::construct(j, e);
 }
 
-template < typename BasicJsonType, typename CompatibleArrayType,
-           enable_if_t < is_compatible_array_type<BasicJsonType,
-                         CompatibleArrayType>::value&&
-                         !is_compatible_object_type<BasicJsonType, CompatibleArrayType>::value&&
-                         !is_compatible_string_type<BasicJsonType, CompatibleArrayType>::value&&
-                         !std::is_same<typename BasicJsonType::binary_t, CompatibleArrayType>::value&&
-                         !is_basic_json<CompatibleArrayType>::value,
-                         int > = 0 >
+template < typename BasicJsonType, typename CompatibleArrayType >
+requires (is_compatible_array_type<BasicJsonType, CompatibleArrayType>::value &&
+          !is_compatible_object_type<BasicJsonType, CompatibleArrayType>::value &&
+          !is_compatible_string_type<BasicJsonType, CompatibleArrayType>::value &&
+          !std::is_same<typename BasicJsonType::binary_t, CompatibleArrayType>::value &&
+          !is_basic_json<CompatibleArrayType>::value)
 inline void to_json(BasicJsonType& j, const CompatibleArrayType& arr)
 {
     external_constructor<value_t::array>::construct(j, arr);
@@ -381,8 +379,8 @@ inline void to_json(BasicJsonType& j, typename BasicJsonType::array_t&& arr)
     external_constructor<value_t::array>::construct(j, std::move(arr));
 }
 
-template < typename BasicJsonType, typename CompatibleObjectType,
-           enable_if_t < is_compatible_object_type<BasicJsonType, CompatibleObjectType>::value&& !is_basic_json<CompatibleObjectType>::value, int > = 0 >
+template < typename BasicJsonType, typename CompatibleObjectType >
+requires (is_compatible_object_type<BasicJsonType, CompatibleObjectType>::value && !is_basic_json<CompatibleObjectType>::value)
 inline void to_json(BasicJsonType& j, const CompatibleObjectType& obj)
 {
     external_constructor<value_t::object>::construct(j, obj);

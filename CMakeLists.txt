@@ -6,6 +6,9 @@ cmake_minimum_required(VERSION 3.5...4.0)
 ##
 project(nlohmann_json VERSION 3.12.0 LANGUAGES CXX)
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 ##
 ## MAIN_PROJECT CHECK
 ## determine if nlohmann_json is built as a subproject (using add_subdirectory) or if it is the main project
@@ -50,7 +53,6 @@ else()
     set(JSON_BuildTests_INIT OFF)
 endif()
 option(JSON_BuildTests                     "Build the unit tests when BUILD_TESTING is enabled." ${JSON_BuildTests_INIT})
-option(JSON_CI                             "Enable CI build targets." OFF)
 option(JSON_Diagnostics                    "Use extended diagnostic messages." OFF)
 option(JSON_Diagnostic_Positions           "Enable diagnostic positions." OFF)
 option(JSON_GlobalUDLs                     "Place user-defined string literals in the global namespace." ON)
@@ -58,12 +60,12 @@ option(JSON_ImplicitConversions            "Enable implicit conversions." ON)
 option(JSON_DisableEnumSerialization       "Disable default integer enum serialization." OFF)
 option(JSON_LegacyDiscardedValueComparison "Enable legacy discarded value comparison." OFF)
 option(JSON_Install                        "Install CMake targets during install step." ${MAIN_PROJECT})
-option(JSON_MultipleHeaders                "Use non-amalgamated version of the library." ON)
 option(JSON_SystemInclude                  "Include as system headers (skip for clang-tidy)." OFF)
 
-if (JSON_CI)
-    include(ci)
-endif ()
+# Apple Silicon options
+option(JSON_LTO                            "Enable ThinLTO optimization for targets" ON)
+option(JSON_APPLE_FAST_MATH                "Enable fast-math mathematical optimizations" OFF)
+set(JSON_APPLE_M_CPU                       "apple-m1" CACHE STRING "Tuning CPU target for Apple Silicon")
 
 ##
 ## CONFIGURATION
@@ -85,13 +87,8 @@ set(NLOHMANN_JSON_CMAKE_PROJECT_CONFIG_FILE "${NLOHMANN_JSON_CMAKE_CONFIG_DIR}/$
 set(NLOHMANN_JSON_CMAKE_PROJECT_TARGETS_FILE "${NLOHMANN_JSON_CMAKE_CONFIG_DIR}/${PROJECT_NAME}Targets.cmake")
 set(NLOHMANN_JSON_PKGCONFIG_INSTALL_DIR     "${CMAKE_INSTALL_DATADIR}/pkgconfig")
 
-if (JSON_MultipleHeaders)
-    set(NLOHMANN_JSON_INCLUDE_BUILD_DIR "${PROJECT_SOURCE_DIR}/include/")
-    message(STATUS "Using the multi-header code from ${NLOHMANN_JSON_INCLUDE_BUILD_DIR}")
-else()
-    set(NLOHMANN_JSON_INCLUDE_BUILD_DIR "${PROJECT_SOURCE_DIR}/single_include/")
-    message(STATUS "Using the single-header code from ${NLOHMANN_JSON_INCLUDE_BUILD_DIR}")
-endif()
+set(NLOHMANN_JSON_INCLUDE_BUILD_DIR "${PROJECT_SOURCE_DIR}/include/")
+message(STATUS "Using the multi-header code from ${NLOHMANN_JSON_INCLUDE_BUILD_DIR}")
 
 if (NOT JSON_ImplicitConversions)
     message(STATUS "Implicit conversions are disabled (JSON_USE_IMPLICIT_CONVERSIONS=0)")
@@ -127,11 +124,7 @@ endif()
 ##
 add_library(${NLOHMANN_JSON_TARGET_NAME} INTERFACE)
 add_library(${PROJECT_NAME}::${NLOHMANN_JSON_TARGET_NAME} ALIAS ${NLOHMANN_JSON_TARGET_NAME})
-if (${CMAKE_VERSION} VERSION_LESS "3.8.0")
-    target_compile_features(${NLOHMANN_JSON_TARGET_NAME} INTERFACE cxx_range_for)
-else()
-    target_compile_features(${NLOHMANN_JSON_TARGET_NAME} INTERFACE cxx_std_11)
-endif()
+target_compile_features(${NLOHMANN_JSON_TARGET_NAME} INTERFACE cxx_std_20)
 
 target_compile_definitions(
     ${NLOHMANN_JSON_TARGET_NAME}
@@ -151,17 +144,24 @@ target_include_directories(
     $<INSTALL_INTERFACE:${NLOHMANN_JSON_INCLUDE_INSTALL_DIR}>
 )
 
-## add debug view definition file for msvc (natvis)
-if (MSVC)
-    set(NLOHMANN_ADD_NATVIS TRUE)
-    set(NLOHMANN_NATVIS_FILE "nlohmann_json.natvis")
-    target_sources(
-        ${NLOHMANN_JSON_TARGET_NAME}
-        INTERFACE
-            $<INSTALL_INTERFACE:${NLOHMANN_NATVIS_FILE}>
-            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/${NLOHMANN_NATVIS_FILE}>
-    )
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    if (JSON_APPLE_M_CPU)
+        target_compile_options(${NLOHMANN_JSON_TARGET_NAME} INTERFACE "-mcpu=${JSON_APPLE_M_CPU}")
+    endif()
+    if (JSON_APPLE_FAST_MATH)
+        target_compile_options(${NLOHMANN_JSON_TARGET_NAME} INTERFACE "-ffast-math")
+    endif()
 endif()
+
+if (JSON_LTO)
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT result OUTPUT output)
+    if (result)
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+    endif()
+endif()
+
+# Natvis for MSVC removed (Apple Silicon macOS only)
 
 # Install a pkg-config file, so other tools can find this.
 CONFIGURE_FILE(
@@ -208,12 +208,7 @@ if(JSON_Install)
         FILES ${NLOHMANN_JSON_CMAKE_PROJECT_CONFIG_FILE} ${NLOHMANN_JSON_CMAKE_VERSION_CONFIG_FILE}
         DESTINATION ${NLOHMANN_JSON_CONFIG_INSTALL_DIR}
     )
-    if (NLOHMANN_ADD_NATVIS)
-        install(
-            FILES ${NLOHMANN_NATVIS_FILE}
-            DESTINATION .
-    )
-    endif()
+    # Natvis installation removed (Apple Silicon macOS only)
     export(
         TARGETS ${NLOHMANN_JSON_TARGET_NAME}
         NAMESPACE ${PROJECT_NAME}::
