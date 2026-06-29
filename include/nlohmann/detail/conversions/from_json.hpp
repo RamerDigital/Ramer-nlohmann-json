@@ -326,14 +326,12 @@ inline void from_json_array_impl(const BasicJsonType& j, ConstructibleArrayType&
     arr = std::move(ret);
 }
 
-template < typename BasicJsonType, typename ConstructibleArrayType,
-           enable_if_t <
-               is_constructible_array_type<BasicJsonType, ConstructibleArrayType>::value&&
-               !is_constructible_object_type<BasicJsonType, ConstructibleArrayType>::value&&
-               !is_constructible_string_type<BasicJsonType, ConstructibleArrayType>::value&&
-               !std::is_same<ConstructibleArrayType, typename BasicJsonType::binary_t>::value&&
-               !is_basic_json<ConstructibleArrayType>::value,
-               int > = 0 >
+template < typename BasicJsonType, typename ConstructibleArrayType >
+requires (is_constructible_array_type<BasicJsonType, ConstructibleArrayType>::value &&
+          !is_constructible_object_type<BasicJsonType, ConstructibleArrayType>::value &&
+          !is_constructible_string_type<BasicJsonType, ConstructibleArrayType>::value &&
+          !std::is_same<ConstructibleArrayType, typename BasicJsonType::binary_t>::value &&
+          !is_basic_json<ConstructibleArrayType>::value)
 auto from_json(const BasicJsonType& j, ConstructibleArrayType& arr)
 -> decltype(from_json_array_impl(j, arr, priority_tag<3> {}),
 j.template get<typename ConstructibleArrayType::value_type>(),
@@ -377,8 +375,8 @@ inline void from_json(const BasicJsonType& j, typename BasicJsonType::binary_t& 
     bin = *j.template get_ptr<const typename BasicJsonType::binary_t*>();
 }
 
-template<typename BasicJsonType, typename ConstructibleObjectType,
-         enable_if_t<is_constructible_object_type<BasicJsonType, ConstructibleObjectType>::value, int> = 0>
+template<typename BasicJsonType, typename ConstructibleObjectType>
+requires is_constructible_object_type<BasicJsonType, ConstructibleObjectType>::value
 inline void from_json(const BasicJsonType& j, ConstructibleObjectType& obj)
 {
     if (JSON_HEDLEY_UNLIKELY(!j.is_object()))
