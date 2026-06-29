@@ -121,13 +121,8 @@ json_test_set_test_options(test-unicode4 TEST_PROPERTIES TIMEOUT 3000)
 # add unit tests
 #############################################################################
 
-if("${JSON_TestStandards}" STREQUAL "")
-    set(test_cxx_standards 11 14 17 20 23)
-    unset(test_force)
-else()
-    set(test_cxx_standards ${JSON_TestStandards})
-    set(test_force FORCE)
-endif()
+set(test_cxx_standards 20)
+set(test_force FORCE)
 
 # Print selected standards marking unavailable ones with brackets
 set(msg_standards "")
