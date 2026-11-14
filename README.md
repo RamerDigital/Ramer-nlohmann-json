@@ -1,3 +1,32 @@
+## Ramer Digital Fork — C++20 & Apple Silicon Optimization
+
+This repository is a specialized fork of **`nlohmann/json` 3.12.0** maintained by **Ramer Digital** (`ramerdigital`).
+
+### Objective
+
+Provide a lean, **C++20-modernized** version of `nlohmann/json` tuned for **Apple Silicon (`arm64` / macOS)** real-time audio DSP and inference workloads (such as `Ramer-RTNeural` and `Ramer-TS-M1N3`), ready for clean consumption via Git submodules without legacy multi-platform/multi-standard scaffolding or CI/CD boilerplate.
+
+### Summary of Modifications
+
+* **Strict C++20 Modernization & Zero-Copy `std::span`**:
+  * Enforced C++20 across library and test targets (`CMAKE_CXX_STANDARD 20`, `cxx_std_20`, and `test_cxx_standards` restricted to `20`).
+  * Refactored SFINAE traits (`enable_if_t` / `void_t`) in `include/nlohmann/detail/meta/type_traits.hpp`, `to_json.hpp`, and `from_json.hpp` to C++20 concepts and `requires` clauses (`HasFromJson`, `HasNonDefaultFromJson`, `HasToJson`).
+  * Added zero-copy `std::span<const char>` / `std::span<const std::byte>` input support in `include/nlohmann/detail/input/input_adapters.hpp` and `basic_json::parse`/`accept` in `include/nlohmann/json.hpp`.
+  * Defined `iterator_concept` as `std::random_access_iterator_tag` in `iter_impl.hpp` and `json_reverse_iterator.hpp` for `std::ranges::random_access_range` compatibility.
+* **Compile-Time UTF-8 Table (`constexpr`)**:
+  * Converted the `utf8d` lookup table in `include/nlohmann/detail/output/serializer.hpp` to `static constexpr std::array` to eliminate runtime static initialization and keep the table in read-only constant memory.
+* **Apple Silicon Specialization & CMake Options**:
+  * Simplified platform/compiler checks in `macro_scope.hpp` and `json.hpp` for Apple Clang on `arm64`, removing legacy MSVC/GCC/Windows/Linux workarounds and Natvis files.
+  * Added `JSON_APPLE_M_CPU` (defaults to `"apple-m1"` via `-mcpu=apple-m1` on Clang/Darwin), optional `JSON_APPLE_FAST_MATH` (defaults to `OFF`), and `JSON_LTO` (defaults to `ON`, enabling CMake `CMAKE_INTERPROCEDURAL_OPTIMIZATION` where supported).
+* **Clean Submodule Packaging**:
+  * Consolidated commit history linearly and removed non-CMake build files (Bazel, Meson, SwiftPM, Makefile), upstream CI configurations (`.github/`, `.cirrus.yml`), and auxiliary `docs/` / `tools/` directories.
+
+### License
+
+All upstream `nlohmann/json` MIT licensing and third-party notices in [`LICENSE.MIT`](LICENSE.MIT) and [`LICENSES/`](LICENSES/) are preserved.
+
+---
+
 [![JSON for Modern C++](docs/mkdocs/docs/images/json.gif)](https://github.com/nlohmann/json/releases)
 
 [![Build Status](https://ci.appveyor.com/api/projects/status/1acb366xfyg3qybk/branch/develop?svg=true)](https://ci.appveyor.com/project/nlohmann/json)
